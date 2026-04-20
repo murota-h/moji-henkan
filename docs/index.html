@@ -1,55 +1,525 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
-  <base href="/moji-henkan/">
-
   <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="ことばをかわいくへんかんしよ♡">
-
-  <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="もじもじ">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
-
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="apple-touch-icon.png"/>
-
   <title>もじもじチェンジャー</title>
-  <link rel="manifest" href="manifest.json">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --pink: #FF6BAE;
+      --light-pink: #FFD6E8;
+      --text-pink: #B5007A;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #FFD6E8, #FFF0F6, #EDD6FF);
+      min-height: 100vh;
+      color: #333;
+    }
+    .screen { display: none; min-height: 100vh; flex-direction: column; }
+    .screen.active { display: flex; }
+
+    /* ===== Title ===== */
+    #title-screen { align-items: center; justify-content: center; padding: 32px 24px; gap: 0; }
+    .title-image {
+      width: min(280px, 75vw); height: min(280px, 75vw);
+      border-radius: 32px;
+      box-shadow: 0 8px 24px rgba(255,107,174,0.3);
+      margin-bottom: 24px;
+    }
+    .title-text {
+      font-size: 28px; font-weight: bold; color: var(--text-pink);
+      letter-spacing: 2px; text-align: center; margin-bottom: 8px;
+      text-shadow: 0 2px 8px rgba(255,255,255,0.8);
+    }
+    .title-sub { font-size: 14px; color: #D63A8E; margin-bottom: 40px; }
+    .btn-start {
+      background: var(--pink); color: white; border: none;
+      border-radius: 30px; padding: 16px 0; font-size: 18px;
+      font-weight: bold; cursor: pointer; width: min(280px, 80vw);
+      box-shadow: 0 4px 16px rgba(255,107,174,0.4);
+      font-family: inherit;
+    }
+
+    /* ===== AppBar ===== */
+    .app-bar {
+      display: flex; align-items: center; padding: 12px 8px;
+      background: rgba(255,255,255,0.35); backdrop-filter: blur(8px);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .app-bar-title { flex: 1; text-align: center; font-weight: bold; color: var(--text-pink); font-size: 16px; }
+    .icon-btn {
+      background: none; border: none; font-size: 22px; cursor: pointer;
+      padding: 8px; border-radius: 50%; min-width: 40px; display: flex;
+      align-items: center; justify-content: center; font-family: inherit;
+    }
+
+    /* ===== App Screen ===== */
+    .content { padding: 16px; display: flex; flex-direction: column; gap: 16px; flex: 1; }
+    .card {
+      background: rgba(255,255,255,0.85); border-radius: 20px;
+      border: 2px solid var(--light-pink); padding: 14px;
+    }
+    textarea {
+      width: 100%; border: none; background: transparent;
+      font-size: 16px; line-height: 1.6; resize: none; outline: none;
+      font-family: inherit; color: #333;
+    }
+    textarea::placeholder { color: #D6A0BC; }
+    .section-label { font-weight: bold; color: var(--text-pink); font-size: 14px; margin-bottom: 8px; }
+    .styles-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+    .style-chip {
+      padding: 8px 14px; border-radius: 20px; border: 1.5px solid;
+      background: transparent; cursor: pointer; font-size: 13px;
+      font-family: inherit; transition: all 0.15s;
+    }
+    .style-chip.selected { color: white !important; font-weight: bold; box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
+    .btn-row { display: flex; gap: 10px; }
+    .btn-convert {
+      flex: 1; background: var(--pink); color: white; border: none;
+      border-radius: 30px; padding: 14px; font-size: 16px; font-weight: bold;
+      cursor: pointer; font-family: inherit;
+    }
+    .btn-convert:disabled { opacity: 0.6; }
+    .btn-clear {
+      background: transparent; color: var(--text-pink);
+      border: 2px solid var(--pink); border-radius: 30px;
+      padding: 14px 20px; font-size: 15px; cursor: pointer; font-family: inherit;
+    }
+    .error-box {
+      background: #fff5f5; border: 1px solid #fed7d7;
+      border-radius: 12px; padding: 12px; color: #c53030; font-size: 14px;
+    }
+    .result-card {
+      background: rgba(255,255,255,0.9); border-radius: 20px;
+      border: 2px solid var(--pink); padding: 14px;
+      box-shadow: 0 4px 12px rgba(255,107,174,0.15);
+    }
+    .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .result-title { font-weight: bold; color: var(--text-pink); }
+    .btn-copy { background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px 8px; }
+    .result-divider { border: none; border-top: 1px solid var(--light-pink); margin: 8px 0; }
+    .result-text { font-size: 16px; line-height: 1.7; white-space: pre-wrap; user-select: text; -webkit-user-select: text; }
+
+    /* ===== Settings ===== */
+    .settings-content { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .mode-card {
+      display: flex; align-items: center; gap: 12px; padding: 14px;
+      border-radius: 14px; border: 1.5px solid #ddd; cursor: pointer;
+      transition: all 0.15s; background: transparent; width: 100%;
+      font-family: inherit; text-align: left;
+    }
+    .mode-card.selected { border-color: var(--pink); background: rgba(255,107,174,0.08); }
+    .mode-icon { font-size: 28px; }
+    .mode-info { flex: 1; }
+    .mode-title { font-weight: bold; color: #333; font-size: 15px; }
+    .mode-card.selected .mode-title { color: var(--pink); }
+    .mode-sub { font-size: 12px; color: #999; margin-top: 2px; line-height: 1.4; }
+    .settings-label { font-weight: bold; color: var(--text-pink); font-size: 15px; }
+    .help-btn {
+      width: 22px; height: 22px; background: var(--pink); color: white;
+      border: none; border-radius: 50%; font-weight: bold; font-size: 13px;
+      cursor: pointer; font-family: inherit;
+    }
+    .settings-sub { font-size: 12px; color: #999; margin-bottom: 10px; }
+    .api-input-wrap { position: relative; }
+    .api-input {
+      width: 100%; padding: 12px 44px 12px 14px; border: none;
+      border-radius: 12px; background: rgba(255,214,232,0.3);
+      font-size: 16px; outline: none; font-family: inherit; color: #333;
+    }
+    .eye-btn {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; font-size: 18px; cursor: pointer;
+    }
+    .btn-save {
+      background: var(--pink); color: white; border: none; border-radius: 30px;
+      padding: 16px; font-size: 16px; font-weight: bold; cursor: pointer;
+      font-family: inherit; width: 100%; transition: background 0.2s;
+    }
+    .btn-save.saved { background: #48bb78; }
+
+    /* ===== Modal ===== */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      z-index: 100; align-items: center; justify-content: center; padding: 24px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: white; border-radius: 20px; padding: 24px;
+      max-width: 360px; width: 100%; max-height: 80vh; overflow-y: auto;
+    }
+    .modal-title { font-weight: bold; color: var(--text-pink); font-size: 18px; margin-bottom: 12px; }
+    .modal-body { font-size: 14px; line-height: 1.8; color: #555; }
+    .modal-section { font-weight: bold; color: var(--text-pink); margin: 12px 0 6px; }
+    .modal-close {
+      background: var(--pink); color: white; border: none; border-radius: 20px;
+      padding: 10px 24px; font-size: 15px; font-weight: bold; cursor: pointer;
+      margin-top: 16px; font-family: inherit;
+    }
+    .loader {
+      display: inline-block; width: 18px; height: 18px;
+      border: 3px solid rgba(255,255,255,0.4); border-top-color: white;
+      border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hidden { display: none !important; }
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.75); color: white; padding: 10px 20px;
+      border-radius: 20px; font-size: 14px; z-index: 200;
+      opacity: 0; transition: opacity 0.3s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+  </style>
 </head>
 <body>
-  <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
 
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
-  <script src="flutter_bootstrap.js" async></script>
-  <script>
-    // iOS Safari text input fix
-    document.addEventListener('touchend', function(e) {
-      if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-        document.activeElement && document.activeElement.blur();
+<!-- タイトル画面 -->
+<div id="title-screen" class="screen active">
+  <img src="assets/images/title.png" class="title-image" alt="もじもじチェンジャー">
+  <div class="title-text">もじもじチェンジャー</div>
+  <div class="title-sub">ことばをかわいくへんかんしよ♡</div>
+  <button class="btn-start" onclick="showScreen('app')">はじめる ✨</button>
+</div>
+
+<!-- メイン画面 -->
+<div id="app-screen" class="screen">
+  <div class="app-bar">
+    <button class="icon-btn" onclick="showScreen('title')">🏠</button>
+    <div class="app-bar-title">もじもじチェンジャー ✨</div>
+    <button class="icon-btn" onclick="showScreen('settings')">⚙️</button>
+  </div>
+  <div class="content">
+    <div class="card">
+      <textarea id="input-text" rows="4" placeholder="✏️ 変換したい文章を入力してね"></textarea>
+    </div>
+    <div>
+      <div class="section-label">💬 スタイルを選んでね</div>
+      <div class="card" style="padding:10px">
+        <div class="styles-wrap" id="style-chips"></div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-convert" id="convert-btn" onclick="convert()">✨ 変換する</button>
+      <button class="btn-clear" onclick="clearAll()">クリア</button>
+    </div>
+    <div id="error-box" class="error-box hidden"></div>
+    <div id="result-card" class="result-card hidden">
+      <div class="result-header">
+        <div class="result-title" id="result-title"></div>
+        <button class="btn-copy" onclick="copyResult()">📋</button>
+      </div>
+      <hr class="result-divider">
+      <div class="result-text" id="result-text"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 設定画面 -->
+<div id="settings-screen" class="screen">
+  <div class="app-bar">
+    <button class="icon-btn" onclick="showScreen('app')">←</button>
+    <div class="app-bar-title">⚙️ 設定</div>
+    <div style="width:40px"></div>
+  </div>
+  <div class="settings-content">
+    <div class="card">
+      <div class="settings-label" style="margin-bottom:12px">🔀 変換モード</div>
+      <button class="mode-card" id="mode-ai" onclick="selectMode(true)">
+        <span class="mode-icon">🤖</span>
+        <div class="mode-info">
+          <div class="mode-title">AIモード</div>
+          <div class="mode-sub">Gemini AIが高品質に変換<br>（APIキーが必要）</div>
+        </div>
+        <span id="check-ai">✅</span>
+      </button>
+      <div style="height:8px"></div>
+      <button class="mode-card" id="mode-simple" onclick="selectMode(false)">
+        <span class="mode-icon">📝</span>
+        <div class="mode-info">
+          <div class="mode-title">シンプルモード</div>
+          <div class="mode-sub">ルールベースで変換<br>（APIキー不要・オフライン）</div>
+        </div>
+        <span id="check-simple" class="hidden">✅</span>
+      </button>
+    </div>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <span class="settings-label">🔑 Gemini APIキー</span>
+        <button class="help-btn" onclick="showModal()">?</button>
+      </div>
+      <div class="settings-sub">AIモード使用時に必要です</div>
+      <div class="api-input-wrap">
+        <input class="api-input" id="api-key-input" type="password" placeholder="APIキーを入力">
+        <button class="eye-btn" id="eye-btn" onclick="toggleEye()">👁️</button>
+      </div>
+    </div>
+    <button class="btn-save" id="save-btn" onclick="saveSettings()">💾 保存する</button>
+  </div>
+</div>
+
+<!-- ヘルプモーダル -->
+<div class="modal-overlay" id="help-modal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-title">🔑 APIキーとは？</div>
+    <div class="modal-body">
+      <p>APIキーは、GeminiのAIを使うための「合言葉」のようなものです。このアプリがAIと話せるようにするために必要です。</p>
+      <div class="modal-section">📋 取得方法</div>
+      <p>① ブラウザで「Google AI Studio」と検索する</p><br>
+      <p>② Googleアカウントでログインする</p><br>
+      <p>③ 左メニューの「Get API key」をタップ</p><br>
+      <p>④「APIキーを作成」ボタンを押す</p><br>
+      <p>⑤ 表示されたキーをコピーして、このアプリの入力欄に貼りつける</p><br>
+      <p style="color:#999;font-size:12px">💡 無料枠があるので、普通に使う分には料金はかかりません。</p>
+    </div>
+    <button class="modal-close" onclick="closeModal()">とじる</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STYLES = [
+  { id:'keigo',   label:'敬語・丁寧語', emoji:'👩', color:'#2196F3',
+    prompt:'あなたは日本語の文章を丁寧な敬語・丁寧語に変換するアシスタントです。入力された文章を自然で丁寧な敬語表現に変換してください。変換した文章のみを出力してください。説明や前置きは不要です。' },
+  { id:'gyaru',   label:'ギャル語',     emoji:'💅', color:'#FF4081',
+    prompt:'あなたは日本語の文章をギャル語に変換するアシスタントです。入力された文章をギャルっぽい口調・スラング・絵文字を使ってノリよく変換してください。変換した文章のみを出力してください。' },
+  { id:'obachan', label:'おばちゃん語', emoji:'👵', color:'#FF9800',
+    prompt:'あなたは日本語の文章をおばちゃん語に変換するアシスタントです。関西弁や世話焼きなおばちゃんっぽい口調、「〜やで」「〜やん」「ほんまに」などの表現を使って変換してください。変換した文章のみを出力してください。' },
+  { id:'kansai',  label:'関西弁',       emoji:'🦊', color:'#4CAF50',
+    prompt:'あなたは日本語の文章を関西弁に変換するアシスタントです。自然な関西弁（大阪弁）に変換してください。変換した文章のみを出力してください。' },
+  { id:'kobun',   label:'古文・武士語', emoji:'⚔️', color:'#795548',
+    prompt:'あなたは日本語の文章を古文・武士語に変換するアシスタントです。「〜でござる」「〜にて候」「某」などの武士語・古文調の表現に変換してください。変換した文章のみを出力してください。' },
+  { id:'kodomo',  label:'子ども語',     emoji:'🐭', color:'#9C27B0',
+    prompt:'あなたは日本語の文章を子ども語に変換するアシスタントです。幼い子どもが話すような、簡単な言葉・ひらがな多め・かわいい表現に変換してください。変換した文章のみを出力してください。' },
+  { id:'hyojun',  label:'標準語',       emoji:'💻', color:'#607D8B',
+    prompt:'あなたは日本語の文章を標準的な日本語に変換するアシスタントです。方言やスラングを使わない、自然な標準語に変換してください。変換した文章のみを出力してください。' },
+];
+
+let selectedStyleId = 'keigo';
+let isAiMode = true;
+let isObscured = true;
+
+function init() {
+  isAiMode = localStorage.getItem('is_ai_mode') !== 'false';
+  document.getElementById('api-key-input').value = localStorage.getItem('api_key') || '';
+  updateModeUI();
+
+  const wrap = document.getElementById('style-chips');
+  STYLES.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'style-chip';
+    btn.id = 'chip-' + s.id;
+    btn.textContent = s.emoji + ' ' + s.label;
+    btn.style.borderColor = s.color;
+    btn.style.color = s.color;
+    btn.onclick = () => selectStyle(s.id);
+    wrap.appendChild(btn);
+  });
+  selectStyle('keigo');
+}
+
+function selectStyle(id) {
+  selectedStyleId = id;
+  STYLES.forEach(s => {
+    const chip = document.getElementById('chip-' + s.id);
+    if (s.id === id) {
+      chip.classList.add('selected');
+      chip.style.background = s.color;
+      chip.style.color = 'white';
+    } else {
+      chip.classList.remove('selected');
+      chip.style.background = 'transparent';
+      chip.style.color = s.color;
+    }
+  });
+}
+
+function showScreen(name) {
+  ['title','app','settings'].forEach(n =>
+    document.getElementById(n+'-screen').classList.remove('active')
+  );
+  document.getElementById(name+'-screen').classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+async function convert() {
+  const input = document.getElementById('input-text').value.trim();
+  if (!input) return;
+  document.getElementById('error-box').classList.add('hidden');
+  document.getElementById('result-card').classList.add('hidden');
+
+  if (!isAiMode) {
+    showResult(simpleConvert(input, selectedStyleId));
+    return;
+  }
+
+  const apiKey = localStorage.getItem('api_key') || '';
+  if (!apiKey) {
+    showError('APIキーが設定されていません。設定画面から入力してください。');
+    return;
+  }
+
+  const btn = document.getElementById('convert-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loader"></span>';
+
+  try {
+    const style = STYLES.find(s => s.id === selectedStyleId);
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: style.prompt }] },
+          contents: [{ parts: [{ text: input }] }],
+          generationConfig: { maxOutputTokens: 1024 }
+        })
       }
-    }, false);
-  </script>
+    );
+    const data = await res.json();
+    if (!res.ok) {
+      showError('APIエラー: ' + (data.error?.message || 'ステータスコード: ' + res.status));
+    } else {
+      showResult(data.candidates[0].content.parts[0].text.trim());
+    }
+  } catch(e) {
+    showError('エラーが発生しました: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✨ 変換する';
+  }
+}
+
+function showResult(text) {
+  const style = STYLES.find(s => s.id === selectedStyleId);
+  document.getElementById('result-title').textContent = style.emoji + ' 変換結果';
+  document.getElementById('result-text').textContent = text;
+  document.getElementById('result-card').classList.remove('hidden');
+  document.getElementById('result-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function showError(msg) {
+  const box = document.getElementById('error-box');
+  box.textContent = msg;
+  box.classList.remove('hidden');
+}
+
+function clearAll() {
+  document.getElementById('input-text').value = '';
+  document.getElementById('result-card').classList.add('hidden');
+  document.getElementById('error-box').classList.add('hidden');
+}
+
+async function copyResult() {
+  const text = document.getElementById('result-text').textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch(e) {
+    const el = document.createElement('textarea');
+    el.value = text;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+  }
+  showToast('コピーしました 💕');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function selectMode(ai) {
+  isAiMode = ai;
+  updateModeUI();
+}
+
+function updateModeUI() {
+  document.getElementById('mode-ai').classList.toggle('selected', isAiMode);
+  document.getElementById('mode-simple').classList.toggle('selected', !isAiMode);
+  document.getElementById('check-ai').classList.toggle('hidden', !isAiMode);
+  document.getElementById('check-simple').classList.toggle('hidden', isAiMode);
+}
+
+function toggleEye() {
+  isObscured = !isObscured;
+  document.getElementById('api-key-input').type = isObscured ? 'password' : 'text';
+  document.getElementById('eye-btn').textContent = isObscured ? '👁️' : '🙈';
+}
+
+function saveSettings() {
+  localStorage.setItem('api_key', document.getElementById('api-key-input').value.trim());
+  localStorage.setItem('is_ai_mode', isAiMode ? 'true' : 'false');
+  const btn = document.getElementById('save-btn');
+  btn.textContent = '✅ 保存しました！';
+  btn.classList.add('saved');
+  setTimeout(() => { btn.textContent = '💾 保存する'; btn.classList.remove('saved'); }, 2000);
+}
+
+function showModal() { document.getElementById('help-modal').classList.add('active'); }
+function closeModal(e) {
+  if (!e || e.target.id === 'help-modal' || e.target.classList.contains('modal-close'))
+    document.getElementById('help-modal').classList.remove('active');
+}
+
+function simpleConvert(text, styleId) {
+  let t = text;
+  switch(styleId) {
+    case 'keigo':
+      t = t.replace(/ありがとう/g,'ありがとうございます').replace(/すみません/g,'大変申し訳ございません')
+           .replace(/わかった/g,'かしこまりました').replace(/いい/g,'よろしい')
+           .replace(/だよ/g,'でございます').replace(/だね/g,'ですね')
+           .replace(/だ。/g,'です。').replace(/する。/g,'いたします。')
+           .replace(/した。/g,'いたしました。').replace(/ない。/g,'ません。'); break;
+    case 'gyaru':
+      t = t.replace(/すごい/g,'やばい').replace(/面白い/g,'ウケる')
+           .replace(/かわいい/g,'かわよ〜').replace(/ありがとう/g,'あざ！')
+           .replace(/わかった/g,'りょ！').replace(/でも/g,'でもさぁ')
+           .replace(/だよ/g,'だしぃ').replace(/だね/g,'だよね〜')
+           .replace(/そう/g,'それな').replace(/。/g,'！ 💅'); break;
+    case 'obachan':
+      t = t.replace(/ありがとう/g,'おおきに〜').replace(/そう/g,'ほんまに')
+           .replace(/すごい/g,'えらいすごい').replace(/だよ/g,'やで〜')
+           .replace(/だね/g,'やん').replace(/です/g,'でっせ')
+           .replace(/ます/g,'まっせ').replace(/。/g,'。ほんまに。'); break;
+    case 'kansai':
+      t = t.replace(/ありがとう/g,'おおきに').replace(/すごい/g,'めっちゃすごい')
+           .replace(/だよ/g,'やで').replace(/だね/g,'やな')
+           .replace(/だ。/g,'や。').replace(/です/g,'でんな')
+           .replace(/ます/g,'まっせ').replace(/ない/g,'ちゃう')
+           .replace(/そう/g,'せやな'); break;
+    case 'kobun':
+      t = t.replace(/私/g,'某').replace(/あなた/g,'貴殿')
+           .replace(/ありがとう/g,'かたじけない').replace(/すごい/g,'これは見事な')
+           .replace(/わかった/g,'承知いたした').replace(/だ。/g,'でござる。')
+           .replace(/です/g,'にて候').replace(/ます/g,'いたす')
+           .replace(/した/g,'いたした'); break;
+    case 'kodomo':
+      t = t.replace(/ありがとう/g,'ありがとー！').replace(/わかった/g,'わかったー！')
+           .replace(/すごい/g,'すごーい！').replace(/かわいい/g,'かわいいー！')
+           .replace(/です/g,'でーす').replace(/ます/g,'まーす')
+           .replace(/だよ/g,'だよー').replace(/。/g,'ー！ '); break;
+    case 'hyojun':
+      t = t.replace(/やで/g,'だよ').replace(/やな/g,'だね')
+           .replace(/おおきに/g,'ありがとう').replace(/せやな/g,'そうだね')
+           .replace(/でんな/g,'ですよ').replace(/まっせ/g,'ます')
+           .replace(/でっせ/g,'です').replace(/ちゃう/g,'ない'); break;
+  }
+  return t;
+}
+
+init();
+</script>
 </body>
 </html>
