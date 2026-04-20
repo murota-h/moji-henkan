@@ -12,7 +12,8 @@
       "Bash(git branch *)",
       "Bash(git push *)",
       "Bash(rm -rf docs)",
-      "Bash(sed -i 's|<base href=\"/\">|<base href=\"/moji-henkan/\">|' build/web/index.html)"
+      "Bash(sed -i 's|<base href=\"/\">|<base href=\"/moji-henkan/\">|' build/web/index.html)",
+      "Bash(flutter --version)"
     ],
     "additionalDirectories": [
       "c:\\src\\moji_henkan\\assets"
