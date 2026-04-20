@@ -11,7 +11,8 @@
       "Bash(git remote *)",
       "Bash(git branch *)",
       "Bash(git push *)",
-      "Bash(rm -rf docs)"
+      "Bash(rm -rf docs)",
+      "Bash(sed -i 's|<base href=\"/\">|<base href=\"/moji-henkan/\">|' build/web/index.html)"
     ],
     "additionalDirectories": [
       "c:\\src\\moji_henkan\\assets"
